@@ -60,16 +60,16 @@ public class Constant {
     public static final String FILE_FORMAT_PARQUET = "Parquet";
 
     public static final String MIDDLEWARE_TUBE = "TUBE";
-
     public static final String MIDDLEWARE_PULSAR = "PULSAR";
-
+    public static final String MIDDLEWARE_TDMQ_PULSAR = "TDMQ_PULSAR";
     public static final String MIDDLEWARE_NONE = "NONE";
-
-    public static final String MIDDLEWARE_TDMQ = "TDMQ";
 
     public static final String SCHEMA_M0_DAY = "m0_day";
 
-    public static final String CLUSTER_HIVE_TOPO = "HIVE_TOPO";
+    public static final String CLUSTER_TUBE = "TUBE";
+    public static final String CLUSTER_PULSAR = "PULSAR";
+    public static final String CLUSTER_TDMQ_PULSAR = "TDMQ_PULSAR";
+    public static final String CLUSTER_DATA_PROXY = "DATA_PROXY";
 
     public static final String ID_IS_EMPTY = "primary key is empty";
 
@@ -110,5 +110,7 @@ public class Constant {
     public static final String PULSAR_SERVICEURL = "pulsar_serviceUrl";
 
     public static final String TUBE_MASTER_URL = "tube_masterUrl";
+
+    public static final String DATA_FLOW_GROUP_ID_KEY = "inlong.group.id";
 
 }

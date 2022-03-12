@@ -15,20 +15,35 @@
  * limitations under the License.
  */
 
-package org.apache.inlong.manager.common.pojo.dataproxy;
+package org.apache.inlong.manager.client.api;
 
-import io.swagger.annotations.ApiModel;
-import io.swagger.annotations.ApiModelProperty;
-import lombok.Data;
+import lombok.Getter;
 
-@Data
-@ApiModel("DataProxy IP request param")
-public class DataProxyIpRequest {
+import java.util.Locale;
 
-    @ApiModelProperty(value = "local ip of the data proxy")
-    String ip = "";
+/**
+ * Enum of auto offset reset strategy of Kafka.
+ */
+public enum KafkaOffset {
 
-    @ApiModelProperty(value = "net tag of the data proxy, default: all")
-    String netTag;
+    EARLIEST("earliest"),
+    LATEST("latest"),
+    NONE("none");
+
+    @Getter
+    private final String name;
+
+    KafkaOffset(String name) {
+        this.name = name;
+    }
+
+    public static KafkaOffset forName(String name) {
+        for (KafkaOffset dataFormat : values()) {
+            if (dataFormat.getName().equals(name.toLowerCase(Locale.ROOT))) {
+                return dataFormat;
+            }
+        }
+        throw new IllegalArgumentException(String.format("Unsupported KafkaOffset=%s for Inlong", name));
+    }
 
 }

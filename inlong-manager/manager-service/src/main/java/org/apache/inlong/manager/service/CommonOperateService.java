@@ -18,13 +18,23 @@
 package org.apache.inlong.manager.service;
 
 import com.google.gson.Gson;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
 import org.apache.inlong.common.pojo.dataproxy.PulsarClusterInfo;
+import org.apache.inlong.manager.common.beans.ClusterBean;
 import org.apache.inlong.manager.common.enums.Constant;
 import org.apache.inlong.manager.common.enums.ErrorCodeEnum;
 import org.apache.inlong.manager.common.enums.GroupState;
+import org.apache.inlong.manager.common.enums.SinkType;
 import org.apache.inlong.manager.common.exceptions.BusinessException;
-import org.apache.inlong.manager.common.pojo.cluster.ClusterRequest;
+import org.apache.inlong.manager.common.exceptions.WorkflowListenerException;
+import org.apache.inlong.manager.common.pojo.cluster.ClusterPageRequest;
+import org.apache.inlong.manager.common.pojo.group.InlongGroupInfo;
 import org.apache.inlong.manager.common.pojo.group.InlongGroupPageRequest;
+import org.apache.inlong.manager.common.pojo.sink.SinkResponse;
+import org.apache.inlong.manager.common.pojo.sink.hive.HiveSinkResponse;
+import org.apache.inlong.manager.common.pojo.source.SourceResponse;
+import org.apache.inlong.manager.common.pojo.stream.InlongStreamInfo;
 import org.apache.inlong.manager.common.util.JsonUtils;
 import org.apache.inlong.manager.common.util.Preconditions;
 import org.apache.inlong.manager.dao.entity.DataProxyClusterEntity;
@@ -33,12 +43,25 @@ import org.apache.inlong.manager.dao.entity.ThirdPartyClusterEntity;
 import org.apache.inlong.manager.dao.mapper.DataProxyClusterEntityMapper;
 import org.apache.inlong.manager.dao.mapper.InlongGroupEntityMapper;
 import org.apache.inlong.manager.dao.mapper.ThirdPartyClusterEntityMapper;
+import org.apache.inlong.manager.service.core.InlongStreamService;
+import org.apache.inlong.manager.service.source.StreamSourceService;
+import org.apache.inlong.manager.service.thirdparty.sort.util.FieldInfoUtils;
+import org.apache.inlong.manager.service.thirdparty.sort.util.SinkInfoUtils;
+import org.apache.inlong.manager.service.thirdparty.sort.util.SourceInfoUtils;
+import org.apache.inlong.sort.protocol.DataFlowInfo;
+import org.apache.inlong.sort.protocol.FieldInfo;
+import org.apache.inlong.sort.protocol.sink.SinkInfo;
+import org.apache.inlong.sort.protocol.source.SourceInfo;
+import org.apache.inlong.sort.protocol.transformation.FieldMappingRule;
+import org.apache.inlong.sort.protocol.transformation.TransformationInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -51,11 +74,15 @@ public class CommonOperateService {
     private static final Logger LOGGER = LoggerFactory.getLogger(CommonOperateService.class);
 
     @Autowired
+    private ClusterBean clusterBean;
+    @Autowired
+    private InlongStreamService streamService;
+    @Autowired
+    private StreamSourceService streamSourceService;
+    @Autowired
     private InlongGroupEntityMapper groupMapper;
-
     @Autowired
     private DataProxyClusterEntityMapper dataProxyClusterMapper;
-
     @Autowired
     private ThirdPartyClusterEntityMapper thirdPartyClusterMapper;
 
@@ -114,9 +141,9 @@ public class CommonOperateService {
      * @param type Cluster type, such as TUBE, PULSAR, etc.
      */
     private ThirdPartyClusterEntity getThirdPartyCluster(String type) {
-        InlongGroupPageRequest request = new InlongGroupPageRequest();
-        request.setMiddlewareType(type);
-        List<InlongGroupEntity> groupEntities = groupMapper.selectByCondition(request);
+        InlongGroupPageRequest groupPageRequest = new InlongGroupPageRequest();
+        groupPageRequest.setMiddlewareType(type);
+        List<InlongGroupEntity> groupEntities = groupMapper.selectByCondition(groupPageRequest);
         if (groupEntities.isEmpty()) {
             LOGGER.warn("no inlong group found by type={}", type);
             return null;
@@ -130,9 +157,10 @@ public class CommonOperateService {
         }
 
         String mqSetName = dataProxyCluster.getMqSetName();
-        ClusterRequest mqNameRequest = ClusterRequest.builder().mqSetName(mqSetName).build();
-        List<ThirdPartyClusterEntity> thirdPartyClusters = thirdPartyClusterMapper.selectByCondition(mqNameRequest);
-        if (thirdPartyClusters.isEmpty()) {
+        ClusterPageRequest clusterRequest = new ClusterPageRequest();
+        clusterRequest.setMqSetName(mqSetName);
+        List<ThirdPartyClusterEntity> thirdPartyClusters = thirdPartyClusterMapper.selectByCondition(clusterRequest);
+        if (CollectionUtils.isEmpty(thirdPartyClusters)) {
             LOGGER.warn("no related third-party-cluster by type={} and mq set name={}", type, mqSetName);
             return null;
         }
@@ -141,9 +169,9 @@ public class CommonOperateService {
     }
 
     /**
-     * get pulsar cluster info
+     * Get Pulsar cluster info.
      *
-     * @return
+     * @return Pulsar cluster info.
      */
     public PulsarClusterInfo getPulsarClusterInfo() {
         ThirdPartyClusterEntity thirdPartyClusterEntity = getThirdPartyCluster(Constant.MIDDLEWARE_PULSAR);
@@ -175,12 +203,63 @@ public class CommonOperateService {
 
         GroupState state = GroupState.forCode(inlongGroupEntity.getStatus());
         // Add/modify/delete is not allowed under certain group state
-        if (!GroupState.isAllowedUpdate(state)) {
+        if (GroupState.notAllowedUpdate(state)) {
             LOGGER.error("inlong group status was not allowed to add/update/delete related info");
             throw new BusinessException(ErrorCodeEnum.OPT_NOT_ALLOWED_BY_STATUS);
         }
 
         return inlongGroupEntity;
+    }
+
+    /**
+     * Create dataflow info for sort.
+     */
+    public DataFlowInfo createDataFlow(InlongGroupInfo groupInfo, SinkResponse sinkResponse) {
+        String groupId = sinkResponse.getInlongGroupId();
+        String streamId = sinkResponse.getInlongStreamId();
+        // TODO Support all source type, include AUTO_PUSH.
+        List<SourceResponse> sourceList = streamSourceService.listSource(groupId, streamId);
+        if (CollectionUtils.isEmpty(sourceList)) {
+            throw new WorkflowListenerException(String.format("Source not found by groupId=%s and streamId=%s",
+                    groupId, streamId));
+        }
+
+        // Get all field info
+        List<FieldInfo> sourceFields = new ArrayList<>();
+        List<FieldInfo> sinkFields = new ArrayList<>();
+        String partition = null;
+        if (SinkType.forType(sinkResponse.getSinkType()) == SinkType.HIVE) {
+            HiveSinkResponse hiveSink = (HiveSinkResponse) sinkResponse;
+            partition = hiveSink.getPrimaryPartition();
+        }
+
+        // TODO Support more than one source and one sink
+        final SourceResponse sourceResponse = sourceList.get(0);
+        boolean isAllMigration = SourceInfoUtils.isBinlogAllMigration(sourceResponse);
+        FieldMappingRule fieldMappingRule = FieldInfoUtils.createFieldInfo(isAllMigration,
+                sinkResponse.getFieldList(), sourceFields, sinkFields, partition);
+
+        // Get source info
+        String masterAddress = getSpecifiedParam(Constant.TUBE_MASTER_URL);
+        PulsarClusterInfo pulsarCluster = getPulsarClusterInfo();
+        InlongStreamInfo streamInfo = streamService.get(groupId, streamId);
+        SourceInfo sourceInfo = SourceInfoUtils.createSourceInfo(pulsarCluster, masterAddress, clusterBean,
+                groupInfo, streamInfo, sourceResponse, sourceFields);
+
+        // Get sink info
+        SinkInfo sinkInfo = SinkInfoUtils.createSinkInfo(sourceResponse, sinkResponse, sinkFields);
+
+        // Get transformation info
+        TransformationInfo transInfo = new TransformationInfo(fieldMappingRule);
+
+        // Get properties
+        Map<String, Object> properties = new HashMap<>();
+        if (MapUtils.isNotEmpty(sinkResponse.getProperties())) {
+            properties.putAll(sinkResponse.getProperties());
+        }
+        properties.put(Constant.DATA_FLOW_GROUP_ID_KEY, groupId);
+
+        return new DataFlowInfo(sinkResponse.getId(), sourceInfo, transInfo, sinkInfo, properties);
     }
 
 }

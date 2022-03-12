@@ -176,9 +176,10 @@ CREATE TABLE `third_party_cluster`
     `modifier`    varchar(64)       DEFAULT NULL COMMENT 'Modifier name',
     `create_time` timestamp    NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Create time',
     `modify_time` timestamp    NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Modify time',
-    PRIMARY KEY (`id`)
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `unique_cluster_name` (`name`, `is_deleted`)
 ) ENGINE = InnoDB
-  DEFAULT CHARSET = utf8mb4 COMMENT ='MQ Cluster Information Table';
+  DEFAULT CHARSET = utf8mb4 COMMENT ='Cluster Information Table';
 
 -- ----------------------------
 -- Table structure for common_db_server
@@ -312,9 +313,6 @@ CREATE TABLE `data_proxy_cluster`
     UNIQUE KEY `cluster_name` (`name`, `is_deleted`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4 COMMENT ='DataProxy cluster table';
--- add default data proxy address
-insert into data_proxy_cluster (name, address, port, status, is_deleted, creator, create_time, modify_time)
-values ("default_dataproxy", "dataproxy", 46801, 0, 0, "admin", now(), now());
 
 -- ----------------------------
 -- Table structure for data_schema

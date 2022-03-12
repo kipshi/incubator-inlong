@@ -31,6 +31,7 @@ import org.apache.flume.Channel;
 import org.apache.flume.Event;
 import org.apache.flume.Transaction;
 import org.apache.flume.event.EventBuilder;
+import org.apache.inlong.common.metric.MetricRegister;
 import org.apache.pulsar.client.api.ClientBuilder;
 import org.apache.pulsar.client.api.MessageId;
 import org.apache.pulsar.client.api.Producer;
@@ -60,6 +61,7 @@ public class MockUtils {
      * mockChannel
      * 
      * @return
+     *
      * @throws Exception
      */
     public static Channel mockChannel() throws Exception {
@@ -79,6 +81,7 @@ public class MockUtils {
      * mockEvent
      * 
      * @return
+     *
      * @throws Exception
      */
     public static Event mockEvent() throws Exception {
@@ -98,6 +101,7 @@ public class MockUtils {
      * mockPulsarClient
      * 
      * @return
+     *
      * @throws Exception
      */
     @SuppressWarnings("unchecked")
@@ -145,6 +149,7 @@ public class MockUtils {
      * mockProducer
      * 
      * @return
+     *
      * @throws Exception
      */
     @SuppressWarnings({"unchecked"})
@@ -160,5 +165,15 @@ public class MockUtils {
         PowerMockito.when(future.whenCompleteAsync(any())).thenReturn(future);
         PowerMockito.when(msgBuilder.sendAsync()).thenReturn(future);
         return producer;
+    }
+
+    /**
+     * mockMetricRegister
+     * 
+     * @throws Exception
+     */
+    public static void mockMetricRegister() throws Exception {
+        PowerMockito.mockStatic(MetricRegister.class);
+        PowerMockito.doNothing().when(MetricRegister.class, "register", any());
     }
 }
