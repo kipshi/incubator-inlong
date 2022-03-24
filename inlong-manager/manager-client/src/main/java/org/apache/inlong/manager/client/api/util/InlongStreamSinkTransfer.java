@@ -40,7 +40,7 @@ import org.apache.inlong.manager.common.pojo.sink.hive.HiveSinkRequest;
 import org.apache.inlong.manager.common.pojo.sink.hive.HiveSinkResponse;
 import org.apache.inlong.manager.common.pojo.sink.kafka.KafkaSinkRequest;
 import org.apache.inlong.manager.common.pojo.sink.kafka.KafkaSinkResponse;
-import org.apache.inlong.manager.common.pojo.stream.InlongStreamInfo;
+import org.apache.inlong.manager.common.pojo.stream.InlongStreamResponse;
 import org.apache.inlong.manager.common.util.CommonBeanUtils;
 
 import java.nio.charset.Charset;
@@ -49,7 +49,7 @@ import java.util.stream.Collectors;
 
 public class InlongStreamSinkTransfer {
 
-    public static SinkRequest createSinkRequest(StreamSink streamSink, InlongStreamInfo streamInfo) {
+    public static SinkRequest createSinkRequest(StreamSink streamSink, InlongStreamResponse streamInfo) {
         SinkType sinkType = streamSink.getSinkType();
         SinkRequest sinkRequest;
         if (sinkType == SinkType.HIVE) {
@@ -84,7 +84,7 @@ public class InlongStreamSinkTransfer {
         return streamSinkResult;
     }
 
-    private static SinkRequest createClickHouseRequest(StreamSink streamSink, InlongStreamInfo streamInfo) {
+    private static SinkRequest createClickHouseRequest(StreamSink streamSink, InlongStreamResponse streamInfo) {
         ClickHouseSinkRequest clickHouseSinkRequest = new ClickHouseSinkRequest();
         ClickHouseSink clickHouseSink = (ClickHouseSink) streamSink;
         clickHouseSinkRequest.setSinkName(clickHouseSink.getSinkName());
@@ -153,11 +153,11 @@ public class InlongStreamSinkTransfer {
                 sinkFieldResponse.getFieldComment(),
                 null, sinkFieldResponse.getSourceFieldName(),
                 sinkFieldResponse.getSourceFieldType(),
-                sinkFieldResponse.getIsSourceMetaField())).collect(Collectors.toList());
+                sinkFieldResponse.getIsMetaField())).collect(Collectors.toList());
 
     }
 
-    private static SinkRequest createKafkaRequest(StreamSink streamSink, InlongStreamInfo streamInfo) {
+    private static SinkRequest createKafkaRequest(StreamSink streamSink, InlongStreamResponse streamInfo) {
         KafkaSinkRequest kafkaSinkRequest = new KafkaSinkRequest();
         KafkaSink kafkaSink = (KafkaSink) streamSink;
         kafkaSinkRequest.setSinkName(streamSink.getSinkName());
@@ -200,7 +200,7 @@ public class InlongStreamSinkTransfer {
         return kafkaSink;
     }
 
-    private static HiveSinkRequest createHiveRequest(StreamSink streamSink, InlongStreamInfo streamInfo) {
+    private static HiveSinkRequest createHiveRequest(StreamSink streamSink, InlongStreamResponse streamInfo) {
         HiveSinkRequest hiveSinkRequest = new HiveSinkRequest();
         HiveSink hiveSink = (HiveSink) streamSink;
         hiveSinkRequest.setSinkName(streamSink.getSinkName());
@@ -231,18 +231,18 @@ public class InlongStreamSinkTransfer {
     }
 
     private static List<SinkFieldRequest> createSinkFieldRequests(List<SinkField> sinkFields) {
-        List<SinkFieldRequest> sinkFieldRequests = Lists.newArrayList();
+        List<SinkFieldRequest> fieldRequestList = Lists.newArrayList();
         for (SinkField sinkField : sinkFields) {
-            SinkFieldRequest sinkFieldRequest = new SinkFieldRequest();
-            sinkFieldRequest.setFieldName(sinkField.getFieldName());
-            sinkFieldRequest.setFieldType(sinkField.getFieldType().toString());
-            sinkFieldRequest.setFieldComment(sinkField.getFieldComment());
-            sinkFieldRequest.setSourceFieldName(sinkField.getSourceFieldName());
-            sinkFieldRequest.setSourceFieldType(sinkField.getSourceFieldType());
-            sinkFieldRequest.setIsSourceMetaField(sinkField.getIsSourceMetaField());
-            sinkFieldRequests.add(sinkFieldRequest);
+            SinkFieldRequest request = new SinkFieldRequest();
+            request.setFieldName(sinkField.getFieldName());
+            request.setFieldType(sinkField.getFieldType().toString());
+            request.setFieldComment(sinkField.getFieldComment());
+            request.setSourceFieldName(sinkField.getSourceFieldName());
+            request.setSourceFieldType(sinkField.getSourceFieldType());
+            request.setIsMetaField(sinkField.getIsMetaField());
+            fieldRequestList.add(request);
         }
-        return sinkFieldRequests;
+        return fieldRequestList;
     }
 
     private static HiveSink parseHiveSink(HiveSinkResponse sinkResponse, StreamSink sink) {

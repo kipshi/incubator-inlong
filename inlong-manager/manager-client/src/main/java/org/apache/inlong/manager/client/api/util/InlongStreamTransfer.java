@@ -23,15 +23,15 @@ import org.apache.inlong.manager.client.api.InlongStreamConf;
 import org.apache.inlong.manager.client.api.StreamField;
 import org.apache.inlong.manager.common.pojo.group.InlongGroupInfo;
 import org.apache.inlong.manager.common.pojo.stream.InlongStreamFieldInfo;
-import org.apache.inlong.manager.common.pojo.stream.InlongStreamInfo;
+import org.apache.inlong.manager.common.pojo.stream.InlongStreamResponse;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 public class InlongStreamTransfer {
 
-    public static InlongStreamInfo createStreamInfo(InlongStreamConf streamConf, InlongGroupInfo groupInfo) {
-        InlongStreamInfo dataStreamInfo = new InlongStreamInfo();
+    public static InlongStreamResponse createStreamInfo(InlongStreamConf streamConf, InlongGroupInfo groupInfo) {
+        InlongStreamResponse dataStreamInfo = new InlongStreamResponse();
         dataStreamInfo.setInlongGroupId(groupInfo.getInlongGroupId());
         final String streamId = "b_" + streamConf.getName();
         dataStreamInfo.setInlongStreamId(streamId);
@@ -57,18 +57,17 @@ public class InlongStreamTransfer {
     }
 
     public static List<InlongStreamFieldInfo> createStreamFields(
-            List<StreamField> fieldList,
-            InlongStreamInfo streamInfo) {
-        List<InlongStreamFieldInfo> fieldInfos = fieldList.stream().map(streamField -> {
+            List<StreamField> fieldList, InlongStreamResponse streamInfo) {
+        return fieldList.stream().map(field -> {
             InlongStreamFieldInfo fieldInfo = new InlongStreamFieldInfo();
             fieldInfo.setInlongStreamId(streamInfo.getInlongStreamId());
             fieldInfo.setInlongGroupId(streamInfo.getInlongGroupId());
-            fieldInfo.setFieldName(streamField.getFieldName());
-            fieldInfo.setFieldType(streamField.getFieldType().toString());
-            fieldInfo.setFieldComment(streamField.getFieldComment());
-            fieldInfo.setFieldValue(streamField.getFieldValue());
+            fieldInfo.setFieldName(field.getFieldName());
+            fieldInfo.setFieldType(field.getFieldType().toString());
+            fieldInfo.setFieldComment(field.getFieldComment());
+            fieldInfo.setFieldValue(field.getFieldValue());
+            fieldInfo.setIsMetaField(field.getIsMetaField());
             return fieldInfo;
         }).collect(Collectors.toList());
-        return fieldInfos;
     }
 }
