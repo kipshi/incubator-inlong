@@ -102,7 +102,6 @@ public class InlongStreamSourceTransfer {
         DataFormat dataFormat = DataFormat.forName(kafkaSourceResponse.getSerializationType());
         kafkaSource.setDataFormat(dataFormat);
         kafkaSource.setState(State.parseByStatus(kafkaSourceResponse.getStatus()));
-        kafkaSource.setAgentIp(kafkaSourceResponse.getAgentIp());
         kafkaSource.setTopic(kafkaSourceResponse.getTopic());
         kafkaSource.setBootstrapServers(kafkaSourceResponse.getBootstrapServers());
         kafkaSource.setByteSpeedLimit(kafkaSourceResponse.getByteSpeedLimit());
@@ -141,7 +140,6 @@ public class InlongStreamSourceTransfer {
         binlogSource.setHostname(response.getHostname());
         binlogSource.setDataFormat(DataFormat.NONE);
         binlogSource.setPort(response.getPort());
-        binlogSource.setAgentIp(response.getAgentIp());
         binlogSource.setState(State.parseByStatus(response.getStatus()));
         DefaultAuthentication defaultAuthentication = new DefaultAuthentication(
                 response.getUser(),
